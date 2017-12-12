@@ -5,6 +5,8 @@ import argparse
 import signal
 import sys
 import random
+from numpy.random import choice
+
 
 #This example program demonstrates how to use the Melee API to run dolphin programatically,
 #   setup controllers, and send button presses over to dolphin
@@ -77,7 +79,7 @@ def signal_handler(signal, frame):
 signal.signal(signal.SIGINT, signal_handler)
 
 #Run dolphin and render the output
-#dolphin.run(render=True)
+dolphin.run(render=True)
 
 #Plug our controller in
 #   Due to how named pipes work, this has to come AFTER running dolphin
@@ -86,7 +88,7 @@ signal.signal(signal.SIGINT, signal_handler)
 controller.connect()
 
 #dictionary to store di and associated player success ratio
-diDict = {"none" : [0,0], "behind": [0,0], "away" : [0,0], "slight_behind" : [0,0], "slight_away" : [0,0]}
+diDict = {"none" : [0,1], "behind": [0,1], "away" : [0,1], "slight_behind" : [0,1], "slight_away" : [0,1]}
 
 #combo flags
 started = 0
@@ -115,8 +117,13 @@ while True:
         #print(gamestate.ai_state.hitstun_frames_left)
         print(gamestate.ai_state.action)
         
-        di = diDict{} 
+        diList = diDict.keys()
+        print(diList)
+        ratioList = []
+        for di in diDict:
+            ratioList.append(diDict[di][0]/diDict[di][1])
          
+        print(ratioList)
         if(gamestate.ai_state.action in [Action.GRABBED, Action.GRAB_PUMMELED, Action.GRAB_PULL, \
                 Action.GRAB_PUMMELED, Action.GRAB_PULLING_HIGH, Action.GRABBED_WAIT_HIGH, \
                 Action.PUMMELED_HIGH, Action.THROWN_UP]):
