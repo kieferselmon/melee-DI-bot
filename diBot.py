@@ -5,7 +5,7 @@ import argparse
 import signal
 import sys
 import random
-from numpy.random import choice
+#from numpy.random import choice
 
 
 #This example program demonstrates how to use the Melee API to run dolphin programatically,
@@ -18,10 +18,10 @@ def check_port(value):
          Must be 1, 2, 3, or 4." % value)
     return ivalue
 
-def di(controller):
+def mydi(controller):
     x = random.randint(0,1)
-    print ("DI() IS HAPENING" + str(x))
-    controller.tilt_analog(Button.BUTTON_MAIN, 0.5, 0.5)
+    #print ("DI() IS HAPENING" + str(x))
+    controller.tilt_analog(Button.BUTTON_MAIN, x, 0.5)
 
 chain = None
 
@@ -115,7 +115,7 @@ while True:
             #melee.techskill.multishine(ai_state=gamestate.ai_state, controller=controller)
 
         #print(gamestate.ai_state.hitstun_frames_left)
-        print(gamestate.ai_state.action)
+        print(gamestate.opponent_state.facing)
         
         diList = diDict.keys()
         print(diList)
@@ -134,7 +134,7 @@ while True:
                 regrabs += 1
             started = 1
 
-            di(controller)
+            mydi(controller)
         elif(gamestate.ai_state.hitstun_frames_left <= 0):
             controller.tilt_analog(Button.BUTTON_MAIN, 0.5, 0.5)
             if gamestate.ai_state.action in [Action.FALLING, Action.FALLING_AERIAL, Action.TUMBLING]:
