@@ -5,7 +5,8 @@ import argparse
 import signal
 import sys
 import random
-#from numpy.random import choice
+import operator
+from numpy.random import choice
 
 
 #This example program demonstrates how to use the Melee API to run dolphin programatically,
@@ -18,9 +19,32 @@ def check_port(value):
          Must be 1, 2, 3, or 4." % value)
     return ivalue
 
-def mydi(controller):
-    x = random.randint(0,1)
-    #print ("DI() IS HAPENING" + str(x))
+def mydi(controller, direction, facing):
+    #x = random.randint(0,1)
+
+    if facing and (direction == "none"):
+      x = 0.5
+    if facing and (direction == "behind"):
+      x = 0
+    if facing and (direction == "slight_behind"):
+      x = 0.35
+    if facing and (direction == "away"):
+      x = 1
+    if facing and (direction == "slight_away"):
+      x = 0.7
+    if not facing and (direction == "none"):
+      x = 0.5
+    if not facing and (direction == "behind"):
+      x = 0.1
+    if not facing and (direction == "slight_behind"):
+      x = 0.65
+    if not facing and (direction == "away"):
+      x = 1
+    if not facing and (direction == "slight_away"):
+      x = 0.35
+
+    print ("DI() IS HAPENING" + str(x))
+    
     controller.tilt_analog(Button.BUTTON_MAIN, x, 0.5)
 
 chain = None
@@ -89,11 +113,16 @@ controller.connect()
 
 #dictionary to store di and associated player success ratio
 diDict = {"none" : [0,1], "behind": [0,1], "away" : [0,1], "slight_behind" : [0,1], "slight_away" : [0,1]}
-
+ratioDict = {"none" : 0, "behind" : 0, "away" : 0, "slight_behind" : 0, "slight_away" : 0} 
+sortedList = []
+chance = [0.5, 0.2, 0.1, 0.1, 0.1]
 #combo flags
 started = 0
 regrabs = 0
 misses = 0
+
+di_dir = "none" 
+
 
 #Main loop
 while True:
@@ -117,24 +146,38 @@ while True:
         #print(gamestate.ai_state.hitstun_frames_left)
         print(gamestate.opponent_state.facing)
         
-        diList = diDict.keys()
-        print(diList)
+       
+      
         ratioList = []
+        diList = []
         for di in diDict:
-            ratioList.append(diDict[di][0]/diDict[di][1])
-         
-        print(ratioList)
+            #ratioList.append(diDict[di][0]/diDict[di][1])
+            ratioDict[di] = diDict[di][0]/(diDict[di][1] + diDict[di][0])
+        sorted(ratioDict, key=ratioDict.get)
+	#sort the ratioDict with (k,v)
+        sortedList = sorted(ratioDict.items(), key=operator.itemgetter(1))
+        #Obtain the key from the sortedList
+        for k, v in sortedList:
+            diList.append(k)
+        print(diList)
+        print(ratioDict)
         if(gamestate.ai_state.action in [Action.GRABBED, Action.GRAB_PUMMELED, Action.GRAB_PULL, \
                 Action.GRAB_PUMMELED, Action.GRAB_PULLING_HIGH, Action.GRABBED_WAIT_HIGH, \
                 Action.PUMMELED_HIGH, Action.THROWN_UP]):
-
-            if started == 1 and prevstate not in [Action.GRABBED, Action.GRAB_PUMMELED, Action.GRAB_PULL, \
-                Action.GRAB_PUMMELED, Action.GRAB_PULLING_HIGH, Action.GRABBED_WAIT_HIGH, \
-                Action.PUMMELED_HIGH, Action.THROWN_UP]:
-                regrabs += 1
+ 
+            #if we get grabbed, choose DI only on the first frame
+            if prevstate not in [Action.GRABBED, Action.GRAB_PUMMELED, Action.GRAB_PULL, \
+                      Action.GRAB_PUMMELED, Action.GRAB_PULLING_HIGH, Action.GRABBED_WAIT_HIGH, \
+                      Action.PUMMELED_HIGH, Action.THROWN_UP]:
+                di_dir = choice(diList, p = chance)
+                #if we enter this state while started is already high, weve been regrabbed
+                if started == 1:
+                    diDict[di_dir][0] += 1
+            
+            
             started = 1
 
-            mydi(controller)
+            mydi(controller, di_dir, gamestate.opponent_state.facing)
         elif(gamestate.ai_state.hitstun_frames_left <= 0):
             controller.tilt_analog(Button.BUTTON_MAIN, 0.5, 0.5)
             if gamestate.ai_state.action in [Action.FALLING, Action.FALLING_AERIAL, Action.TUMBLING]:
@@ -145,13 +188,11 @@ while True:
                     controller.press_button(Button.BUTTON_X)
 
             if started == 1 and gamestate.ai_state.action in [Action.TECH_MISS_UP, Action.TECH_MISS_DOWN, Action.LYING_GROUND_DOWN]:
-                misses += 1
+                diDict[di_dir][1] += 1
                 started = 0
 
 
-        print (started)
-        print (regrabs)
-        print (misses)
+        print(diDict)
         prevstate = gamestate.ai_state.action
         
     #If we're at the character select screen, choose our character
